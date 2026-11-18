@@ -8,10 +8,37 @@
   --accent-dark: #c0441d;
   --accent-soft: #fbe3d9;
   --green: #1f9d55;
+  --green-soft: #dcf3e5;
+  --nav-bg: rgba(250, 247, 242, .85);
+  --phone-frame: #1c1917;
+  /* La maqueta representa la página de un cliente: siempre clara */
+  --mock-surface: #ffffff;
+  --mock-bar: #f5f1ea;
+  --mock-line: #e7e1d8;
+  --mock-dot: #ddd5c9;
+  --mock-card: #f6f1ea;
+  --mock-muted: #57534e;
   --radius: 14px;
   --shadow: 0 1px 2px rgba(28, 25, 23, .06), 0 12px 32px -8px rgba(28, 25, 23, .18);
   --font-display: "Fraunces", Georgia, serif;
   --font-body: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #171412; --surface: #221e1b; --ink: #f4efe8; --muted: #b5aca2; --line: #3a332d;
+    --accent: #f0703f; --accent-dark: #e2582d; --accent-soft: #4a2617;
+    --green: #3cc47a; --green-soft: #1c3a29; --nav-bg: rgba(23, 20, 18, .85); --phone-frame: #0b0a09;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 40px -8px rgba(0,0,0,.6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #171412; --surface: #221e1b; --ink: #f4efe8; --muted: #b5aca2; --line: #3a332d;
+  --accent: #f0703f; --accent-dark: #e2582d; --accent-soft: #4a2617;
+  --green: #3cc47a; --green-soft: #1c3a29; --nav-bg: rgba(23, 20, 18, .85); --phone-frame: #0b0a09;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 40px -8px rgba(0,0,0,.6);
+  color-scheme: dark;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -34,10 +61,13 @@ a { color: inherit; text-decoration: none; }
   width: 100%;
   max-width: 1180px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding-left: max(24px, env(safe-area-inset-left, 0px));
+  padding-right: max(24px, env(safe-area-inset-right, 0px));
 }
 
 /* ---------- Botones ---------- */
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 60; background: var(--bg); }
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -64,9 +94,9 @@ a { color: inherit; text-decoration: none; }
 /* ---------- Navegación ---------- */
 .nav {
   position: sticky;
-  top: 0;
+  top: env(safe-area-inset-top, 0px);
   z-index: 50;
-  background: rgba(250, 247, 242, .85);
+  background: var(--nav-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid transparent;
@@ -176,8 +206,8 @@ h1 em {
 .hero__visual { position: relative; padding: 32px 0 48px 0; }
 
 .browser {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--mock-surface);
+  border: 1px solid var(--mock-line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   overflow: hidden;
@@ -188,25 +218,25 @@ h1 em {
   align-items: center;
   gap: 6px;
   padding: 12px 14px;
-  border-bottom: 1px solid var(--line);
-  background: #f5f1ea;
+  border-bottom: 1px solid var(--mock-line);
+  background: var(--mock-bar);
 }
-.browser__bar > span { width: 10px; height: 10px; border-radius: 50%; background: #ddd5c9; }
+.browser__bar > span { width: 10px; height: 10px; border-radius: 50%; background: var(--mock-dot); }
 .browser__url {
   flex: 1;
   margin-left: 12px;
   padding: 4px 12px;
-  background: var(--surface);
+  background: var(--mock-surface);
   border-radius: 6px;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--mock-muted);
 }
 .browser__body { padding: 18px 22px 24px; }
 
 .mock-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
 .mock-logo { width: 70px; height: 12px; border-radius: 4px; background: #7a4a2b; }
 .mock-links { display: flex; gap: 10px; }
-.mock-links i { width: 32px; height: 7px; border-radius: 4px; background: var(--line); }
+.mock-links i { width: 32px; height: 7px; border-radius: 4px; background: var(--mock-line); }
 
 .mock-hero { display: grid; grid-template-columns: 1.1fr 1fr; gap: 18px; align-items: center; margin-bottom: 22px; }
 .mock-title {
@@ -218,7 +248,7 @@ h1 em {
   margin-bottom: 12px;
 }
 .mock-title--sm { font-size: 15px; margin: 10px 0 8px; }
-.mock-line { height: 7px; border-radius: 4px; background: var(--line); margin-bottom: 7px; }
+.mock-line { height: 7px; border-radius: 4px; background: var(--mock-line); margin-bottom: 7px; }
 .mock-line--short { width: 65%; }
 .mock-btn {
   display: inline-block;
@@ -230,7 +260,7 @@ h1 em {
   font-size: 11px;
   font-weight: 600;
 }
-.mock-btn--wa { background: var(--green); margin-top: 6px; font-size: 10px; padding: 5px 12px; }
+.mock-btn--wa { background: #1f9d55; margin-top: 6px; font-size: 10px; padding: 5px 12px; }
 .mock-img {
   aspect-ratio: 1 / 1;
   border-radius: 12px;
@@ -241,7 +271,7 @@ h1 em {
     linear-gradient(135deg, #fbe7cf, #f6d3ac);
 }
 .mock-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.mock-cards div { height: 54px; border-radius: 10px; background: #f6f1ea; border: 1px solid var(--line); }
+.mock-cards div { height: 54px; border-radius: 10px; background: var(--mock-card); border: 1px solid var(--mock-line); }
 
 .phone {
   position: absolute;
@@ -249,8 +279,8 @@ h1 em {
   bottom: 0;
   width: 138px;
   padding: 18px 12px 16px;
-  background: var(--surface);
-  border: 6px solid var(--ink);
+  background: var(--mock-surface);
+  border: 6px solid var(--phone-frame);
   border-radius: 26px;
   box-shadow: var(--shadow);
   transform: rotate(4deg);
@@ -260,7 +290,7 @@ h1 em {
   top: 5px; left: 50%;
   width: 40px; height: 5px;
   border-radius: 4px;
-  background: var(--ink);
+  background: var(--phone-frame);
   transform: translateX(-50%);
 }
 .phone__img {
@@ -295,7 +325,7 @@ h1 em {
   background: var(--accent-soft);
   font-size: 15px;
 }
-.badge__icon--green { background: #dcf3e5; }
+.badge__icon--green { background: var(--green-soft); }
 .badge--top { top: 0; left: -28px; }
 .badge--bottom { bottom: 64px; left: -40px; animation-delay: -3s; }
 
@@ -352,7 +382,7 @@ h1 em {
 }
 
 @media (max-width: 560px) {
-  .container { padding: 0 16px; }
+  .container { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
   body { font-size: 16px; }
   .lead { font-size: 17px; }
   h1 em { white-space: normal; }
