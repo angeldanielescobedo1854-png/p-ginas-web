@@ -41,12 +41,14 @@
       <!-- Capas de luz (decorativas) -->
       <div class="hero__glow" aria-hidden="true"></div>
       <div class="hero__beam" aria-hidden="true"></div>
+      <div class="hero__light" aria-hidden="true"></div>
 
       <!-- Esqueleto de cristal: se inclina y refracta la luz según el cursor -->
       <div class="stage" aria-hidden="true">
         <div class="stage__tilt">
           <img class="stage__img" src="assets/esqueleto-cristal.jpg" alt="" width="404" height="542">
           <div class="stage__prism"></div>
+          <div class="stage__shine"></div>
           <div class="stage__glints"></div>
         </div>
       </div>
@@ -109,20 +111,40 @@
       // Puntos brillantes del cristal (en % de la imagen) donde aparecen destellos
       const hotspots = [[86,30],[74,18],[58,27],[66,44],[62,56],[44,70],[38,84],[70,66],[92,38]];
 
-      let tx = .65, ty = .4, x = tx, y = ty, lastMove = -1e4;
+      const light = document.querySelector('.hero__light');
+      let tx = .65, ty = .4, x = tx, y = ty, lastMove = -1e4, lastTrail = 0;
+      let mouseInside = false;   // con ratón, la luz se queda donde está el cursor
 
       const setTarget = (cx, cy) => {
         const r = hero.getBoundingClientRect();
         tx = (cx - r.left) / r.width;
         ty = (cy - r.top) / r.height;
         lastMove = performance.now();
+        hero.classList.add('is-pointing');
+        if (reduce) return;
+        // Estela de destellos al pasar sobre el cristal
+        const s = stage.getBoundingClientRect();
+        const px = (cx - s.left) / s.width * 100, py = (cy - s.top) / s.height * 100;
+        if (px > 8 && px < 96 && py > 4 && py < 96 && lastMove - lastTrail > 120) {
+          lastTrail = lastMove;
+          spawnGlint(px, py, 'trail');
+        }
       };
 
-      hero.addEventListener('pointermove', e => setTarget(e.clientX, e.clientY));
+      hero.addEventListener('pointermove', e => {
+        if (e.pointerType === 'mouse') mouseInside = true;
+        setTarget(e.clientX, e.clientY);
+      });
+      hero.addEventListener('pointerleave', e => {
+        if (e.pointerType === 'mouse') { mouseInside = false; lastMove = performance.now(); }
+      });
+      // En celular el dedo también arrastra la luz (aunque la página haga scroll)
+      hero.addEventListener('touchstart', e => setTarget(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+      hero.addEventListener('touchmove', e => setTarget(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
 
-      function spawnGlint(px, py, big) {
+      function spawnGlint(px, py, size) {
         const g = document.createElement('span');
-        g.className = 'glint' + (big ? ' glint--big' : '');
+        g.className = 'glint' + (size === true ? ' glint--big' : size === 'trail' ? ' glint--trail' : '');
         g.style.left = px + '%';
         g.style.top = py + '%';
         g.style.setProperty('--rot', (Math.random() * 40 - 20) + 'deg');
@@ -150,6 +172,7 @@
 
       const apply = () => {
         const mx = x.toFixed(4), my = y.toFixed(4);
+        light.style.transform = `translate3d(${(x * hero.clientWidth).toFixed(1)}px, ${(y * hero.clientHeight).toFixed(1)}px, 0)`;
         // Posición del cursor relativa al cristal, para centrar el arcoíris
         const hr = hero.getBoundingClientRect();
         const sr = stage.getBoundingClientRect();
@@ -174,12 +197,15 @@
       function loop(t) {
         if (!running) return;
         // Sin interacción: la luz "respira" sola
-        if (t - lastMove > 2500) {
+        if (!mouseInside && t - lastMove > 3000) {
+          hero.classList.remove('is-pointing');
           tx = .66 + Math.sin(t / 2600) * .2;
           ty = .42 + Math.cos(t / 3400) * .22;
         }
-        x += (tx - x) * .07;
-        y += (ty - y) * .07;
+        // Mientras el usuario mueve el cursor/dedo la luz lo sigue de cerca
+        const k = t - lastMove < 3000 ? .2 : .05;
+        x += (tx - x) * k;
+        y += (ty - y) * k;
         apply();
         if (t > nextGlint && !small.matches) {
           const [hx, hy] = hotspots[Math.floor(Math.random() * hotspots.length)];

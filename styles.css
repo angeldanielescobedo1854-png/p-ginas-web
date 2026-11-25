@@ -188,8 +188,8 @@ a { color: inherit; text-decoration: none; }
     translate3d(calc((var(--mx) - .5) * -18px), calc((var(--my) - .5) * -14px), 0);
   will-change: transform;
   /* Desvanece los bordes de la foto hacia el negro de la página */
-  -webkit-mask-image: radial-gradient(ellipse 64% 50% at 58% 50%, #000 50%, transparent 97%);
-          mask-image: radial-gradient(ellipse 64% 50% at 58% 50%, #000 50%, transparent 97%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 52% at 58% 50%, #000 60%, transparent 98%);
+          mask-image: radial-gradient(ellipse 70% 52% at 58% 50%, #000 60%, transparent 98%);
 }
 
 .stage__img {
@@ -197,7 +197,7 @@ a { color: inherit; text-decoration: none; }
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: saturate(1.1) contrast(1.05);
+  filter: brightness(1.22) contrast(1.15) saturate(1.15);
   animation: reveal 1.6s cubic-bezier(.2, .8, .2, 1) both;
 }
 
@@ -221,6 +221,35 @@ a { color: inherit; text-decoration: none; }
 
 .stage__glints { position: absolute; inset: 0; }
 
+/* Brillo especular: aclara el cristal justo donde está el cursor/dedo.
+   "overlay" deja el negro casi negro y hace resplandecer el vidrio. */
+.stage__shine {
+  position: absolute;
+  inset: 0;
+  mix-blend-mode: overlay;
+  background: radial-gradient(circle at var(--px) var(--py), rgba(255, 255, 255, .95), rgba(255, 255, 255, .35) 14%, transparent 32%);
+  animation: fade-in 1.4s ease .4s both;
+}
+
+/* Orbe de luz que acompaña al cursor por toda la portada.
+   Se mueve con transform (sin redibujar nada más). */
+.hero__light {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 420px;
+  height: 420px;
+  margin: -210px 0 0 -210px;
+  border-radius: 50%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, .16), rgba(190, 230, 255, .07) 45%, transparent);
+  will-change: transform;
+  opacity: 0;
+  transition: opacity .5s ease;
+}
+.hero.is-pointing .hero__light { opacity: 1; }
+
 /* Destello de 4 puntas, como las estrellas de la foto */
 .glint {
   --size: 34px;
@@ -232,6 +261,7 @@ a { color: inherit; text-decoration: none; }
   animation: glint 1.1s cubic-bezier(.2, .8, .2, 1) forwards;
 }
 .glint--big { --size: 110px; animation-duration: 1.3s; }
+.glint--trail { --size: 22px; animation-duration: .8s; }
 .glint::before,
 .glint::after {
   content: "";
@@ -254,7 +284,7 @@ a { color: inherit; text-decoration: none; }
 }
 @keyframes reveal {
   from { opacity: 0; transform: scale(1.06); filter: blur(8px) saturate(1.1); }
-  to   { opacity: 1; transform: none; filter: blur(0) saturate(1.1) contrast(1.05); }
+  to   { opacity: 1; transform: none; filter: blur(0) brightness(1.22) contrast(1.15) saturate(1.15); }
 }
 @keyframes fade-in { from { opacity: 0; } }
 @keyframes flash {
@@ -369,7 +399,7 @@ h1 {
 
 /* ---------- Tablet ---------- */
 @media (max-width: 960px) {
-  .stage { width: 62vw; right: -6vw; opacity: .8; }
+  .stage { width: 62vw; right: -6vw; }
   .hero__content > * { max-width: 560px; }
 }
 
@@ -401,13 +431,23 @@ h1 {
   .hero { align-items: flex-end; padding: calc(96px + env(safe-area-inset-top, 0px)) 0 calc(72px + env(safe-area-inset-bottom, 0px)); }
 
   /* En celular el cristal queda detrás del texto, arriba */
-  .stage { inset: 0 -22vw auto auto; width: 100vw; height: 62svh; align-items: flex-start; padding-top: 64px; opacity: .75; }
+  .stage { inset: 0 -14vw auto auto; width: 100vw; height: 66svh; align-items: flex-start; padding-top: 64px; }
+  .hero__light { width: 280px; height: 280px; margin: -140px 0 0 -140px; }
   .stage__tilt { height: 100%; }
   /* Oscurece la parte baja para que el texto se lea bien */
   .hero::after {
     content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
-    background: linear-gradient(180deg, transparent 18%, rgba(5, 10, 8, .82) 40%, var(--bg) 60%);
+    background:
+      linear-gradient(90deg, rgba(5, 10, 8, .55) 0%, rgba(5, 10, 8, .15) 70%, transparent),
+      linear-gradient(180deg, transparent 22%, rgba(5, 10, 8, .7) 44%, var(--bg) 64%);
   }
+  /* En celular la foto va detrás del texto: brillo moderado y sombra
+     neutra en las letras para que el haz blanco no se las coma */
+  .stage__img { filter: brightness(1.05) contrast(1.15) saturate(1.15); animation: none; }
+  .stage__shine { opacity: .7; }
+  .hero__beam { opacity: .25; }
+  h1, .lead { text-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 0 24px rgba(0, 0, 0, .55); }
+  .spectrum { text-shadow: none; }
   .hero__beam { top: 4%; height: 80px; }
 
   h1 { font-size: clamp(38px, 11vw, 52px); }
