@@ -45,12 +45,8 @@
 
       <!-- Esqueleto de cristal: se inclina y refracta la luz según el cursor -->
       <div class="stage" aria-hidden="true">
-        <div class="stage__tilt">
-          <img class="stage__img" src="assets/esqueleto-cristal.jpg" alt="" width="404" height="542">
-          <div class="stage__prism"></div>
-          <div class="stage__shine"></div>
-          <div class="stage__glints"></div>
-        </div>
+        <canvas class="stage__tilt" width="404" height="542"></canvas>
+        <img class="stage__src" src="assets/esqueleto-cristal.jpg" alt="" width="404" height="542">
       </div>
 
       <div class="container hero__content">
@@ -98,22 +94,55 @@
       toggle.setAttribute('aria-expanded', false);
     }));
 
-    /* ---------- Luz interactiva del hero ---------- */
+    /* ---------- Luz interactiva del hero ----------
+       El esqueleto, el arcoíris, el brillo y los destellos se dibujan
+       en un solo <canvas>. Así el navegador no tiene que recomponer
+       varias capas con modos de fusión en cada cuadro (eso parpadeaba). */
     (() => {
       const hero = document.querySelector('.hero');
-      const stage = document.querySelector('.stage__tilt');
-      const glints = document.querySelector('.stage__glints');
+      const canvas = document.querySelector('.stage__tilt');
+      const src = document.querySelector('.stage__src');
+      const light = document.querySelector('.hero__light');
+      const ctx = canvas.getContext('2d');
       const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
       const small = matchMedia('(max-width: 760px)');
       // Las variables de luz solo van en las capas de luz, nunca en el texto
       const lit = [document.querySelector('.hero__glow'), document.querySelector('.hero__beam'), document.querySelector('.stage')];
 
-      // Puntos brillantes del cristal (en % de la imagen) donde aparecen destellos
-      const hotspots = [[86,30],[74,18],[58,27],[66,44],[62,56],[44,70],[38,84],[70,66],[92,38]];
+      // Puntos brillantes del cristal (0 a 1 sobre la imagen) donde aparecen destellos
+      const hotspots = [[.86,.30],[.74,.18],[.58,.27],[.66,.44],[.62,.56],[.44,.70],[.38,.84],[.70,.66],[.92,.38]];
+      const glints = [];   // { x, y, size, born, life, rot, hue }
 
-      const light = document.querySelector('.hero__light');
-      let tx = .65, ty = .4, x = tx, y = ty, lastMove = -1e4, lastTrail = 0;
-      let mouseInside = false;   // con ratón, la luz se queda donde está el cursor
+      let W = 0, H = 0;
+      const prism = document.createElement('canvas');   // capa auxiliar del arcoíris
+      const pctx = prism.getContext('2d');
+
+      function resize() {
+        const r = canvas.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        // No hace falta más resolución que ~1000px de alto: la foto es pequeña
+        const scale = Math.min(dpr, 1000 / Math.max(r.height, 1));
+        W = Math.max(1, Math.round(r.width * scale));
+        H = Math.max(1, Math.round(r.height * scale));
+        canvas.width = prism.width = W;
+        canvas.height = prism.height = H;
+        dirty = true;
+      }
+
+      let tx = .65, ty = .4, x = tx, y = ty, lastMove = -1e4, lastTrail = 0, flash = 0;
+      let mouseInside = false, dirty = true;
+
+      // Posición del cursor relativa al esqueleto (0 a 1)
+      const toStage = (cx, cy) => {
+        const s = canvas.getBoundingClientRect();
+        return [(cx - s.left) / s.width, (cy - s.top) / s.height];
+      };
+
+      function addGlint(u, v, size, life) {
+        glints.push({ x: u, y: v, size, life, born: performance.now(),
+          rot: Math.random() * .6 - .3, hue: Math.round(Math.random() * 360) });
+        dirty = true;
+      }
 
       const setTarget = (cx, cy) => {
         const r = hero.getBoundingClientRect();
@@ -123,11 +152,10 @@
         hero.classList.add('is-pointing');
         if (reduce) return;
         // Estela de destellos al pasar sobre el cristal
-        const s = stage.getBoundingClientRect();
-        const px = (cx - s.left) / s.width * 100, py = (cy - s.top) / s.height * 100;
-        if (px > 8 && px < 96 && py > 4 && py < 96 && lastMove - lastTrail > 120) {
+        const [u, v] = toStage(cx, cy);
+        if (u > .08 && u < .96 && v > .04 && v < .96 && lastMove - lastTrail > 120) {
           lastTrail = lastMove;
-          spawnGlint(px, py, 'trail');
+          addGlint(u, v, .055, 800);
         }
       };
 
@@ -142,53 +170,136 @@
       hero.addEventListener('touchstart', e => setTarget(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
       hero.addEventListener('touchmove', e => setTarget(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
 
-      function spawnGlint(px, py, size) {
-        const g = document.createElement('span');
-        g.className = 'glint' + (size === true ? ' glint--big' : size === 'trail' ? ' glint--trail' : '');
-        g.style.left = px + '%';
-        g.style.top = py + '%';
-        g.style.setProperty('--rot', (Math.random() * 40 - 20) + 'deg');
-        g.style.setProperty('--hue', Math.round(Math.random() * 360));
-        glints.appendChild(g);
-        g.addEventListener('animationend', () => g.remove());
-      }
-
-      // Toque / clic: destello en ese punto y ráfaga de luz
+      // Toque / clic: destello grande y ráfaga de luz
       hero.addEventListener('pointerdown', e => {
         if (e.target.closest('a, button')) return;
         setTarget(e.clientX, e.clientY);
-        const r = stage.getBoundingClientRect();
-        const px = (e.clientX - r.left) / r.width * 100;
-        const py = (e.clientY - r.top) / r.height * 100;
-        hero.classList.remove('is-flash'); void hero.offsetWidth; hero.classList.add('is-flash');
+        flash = performance.now();
         if (reduce) return;
-        if (px > -10 && px < 110 && py > -10 && py < 110) {
-          spawnGlint(px, py, true);
-        } else {
-          const [hx, hy] = hotspots[Math.floor(Math.random() * hotspots.length)];
-          spawnGlint(hx, hy, true);
-        }
+        let [u, v] = toStage(e.clientX, e.clientY);
+        if (!(u > -.1 && u < 1.1 && v > -.1 && v < 1.1)) [u, v] = hotspots[Math.floor(Math.random() * hotspots.length)];
+        addGlint(u, v, .26, 1300);
       });
 
+      // Estrella de 4 puntas, como las de la foto
+      function drawGlint(g, now) {
+        const p = Math.max(0, (now - g.born) / g.life);
+        if (p >= 1) return false;
+        const grow = p < .3 ? p / .3 : 1 - (p - .3) / .7 * .8;
+        const alpha = p < .3 ? p / .3 : 1 - (p - .3) / .7;
+        const s = Math.max(.5, g.size * H * grow);
+        ctx.save();
+        ctx.translate(g.x * W, g.y * H);
+        ctx.rotate(g.rot + p * 1.2);
+        ctx.globalAlpha = alpha;
+        const core = ctx.createRadialGradient(0, 0, 0, 0, 0, s * .22);
+        core.addColorStop(0, '#fff');
+        core.addColorStop(.35, `hsla(${g.hue},100%,80%,.6)`);
+        core.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = core;
+        ctx.fillRect(-s * .22, -s * .22, s * .44, s * .44);
+        const lw = Math.max(1, H / 500);
+        for (const [len, a] of [[s / 2, 0], [s / 4.4, Math.PI / 4]]) {
+          ctx.rotate(a);
+          for (const horiz of [true, false]) {
+            const gr = horiz ? ctx.createLinearGradient(-len, 0, len, 0) : ctx.createLinearGradient(0, -len, 0, len);
+            gr.addColorStop(0, 'rgba(255,255,255,0)');
+            gr.addColorStop(.5, 'rgba(255,255,255,1)');
+            gr.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = gr;
+            horiz ? ctx.fillRect(-len, -lw / 2, len * 2, lw) : ctx.fillRect(-lw / 2, -len, lw, len * 2);
+          }
+        }
+        ctx.restore();
+        return true;
+      }
+
+      function draw(now) {
+        if (!src.complete || !src.naturalWidth || !W) return;
+        const mobile = small.matches;
+        const px = cx * W, py = cy * H, R = Math.max(W, H);
+        const f = flash ? Math.max(0, 1 - (now - flash) / 700) : 0;
+
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 1;
+        ctx.clearRect(0, 0, W, H);
+        ctx.drawImage(src, 0, 0, W, H);
+        // Un poco más de brillo: se suma la foto sobre sí misma
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = mobile ? .06 : .24;
+        ctx.drawImage(src, 0, 0, W, H);
+
+        // Arcoíris: modo "color" conserva la luminosidad, así el negro sigue negro
+        pctx.globalCompositeOperation = 'source-over';
+        pctx.clearRect(0, 0, W, H);
+        let cg;
+        if (pctx.createConicGradient) {
+          cg = pctx.createConicGradient(x * Math.PI * 2, px, py);
+          ['#ff6b6b','#ffb36b','#ffe66b','#7dff9a','#6bd8ff','#8f7bff','#ff6bd5','#ff6b6b']
+            .forEach((c, i, a) => cg.addColorStop(i / (a.length - 1), c));
+        } else {
+          cg = pctx.createLinearGradient(px - R * .3, py - R * .3, px + R * .3, py + R * .3);
+          ['#ff6b6b','#ffe66b','#7dff9a','#6bd8ff','#8f7bff','#ff6bd5'].forEach((c, i, a) => cg.addColorStop(i / (a.length - 1), c));
+        }
+        pctx.fillStyle = cg;
+        pctx.fillRect(0, 0, W, H);
+        pctx.globalCompositeOperation = 'destination-in';
+        const pm = pctx.createRadialGradient(px, py, 0, px, py, R * .62);
+        pm.addColorStop(0, 'rgba(0,0,0,1)');
+        pm.addColorStop(.48, 'rgba(0,0,0,.55)');
+        pm.addColorStop(1, 'rgba(0,0,0,0)');
+        pctx.fillStyle = pm;
+        pctx.fillRect(0, 0, W, H);
+        ctx.globalCompositeOperation = 'color';
+        ctx.globalAlpha = .9;
+        ctx.drawImage(prism, 0, 0);
+
+        // Brillo especular donde está el cursor/dedo
+        ctx.globalCompositeOperation = 'overlay';
+        ctx.globalAlpha = Math.min(1, (mobile ? .7 : 1) + f * .6);
+        const sh = ctx.createRadialGradient(px, py, 0, px, py, R * .32);
+        sh.addColorStop(0, 'rgba(255,255,255,.95)');
+        sh.addColorStop(.44, 'rgba(255,255,255,.35)');
+        sh.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = sh;
+        ctx.fillRect(0, 0, W, H);
+
+        // Destellos
+        ctx.globalCompositeOperation = 'lighter';
+        for (let i = glints.length - 1; i >= 0; i--) if (!drawGlint(glints[i], now)) glints.splice(i, 1);
+
+        // Bordes que se desvanecen hacia el negro de la página
+        ctx.globalCompositeOperation = 'destination-in';
+        ctx.globalAlpha = 1;
+        ctx.save();
+        ctx.translate(W * .58, H * .5);
+        ctx.scale(W * .60, H * .52);
+        const edge = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+        edge.addColorStop(.55, 'rgba(0,0,0,1)');
+        edge.addColorStop(.97, 'rgba(0,0,0,0)');
+        ctx.fillStyle = edge;
+        ctx.fillRect(-2, -2, 4, 4);
+        ctx.restore();
+        ctx.globalCompositeOperation = 'source-over';
+      }
+
+      let cx = .5, cy = .4;   // cursor relativo al esqueleto
       const apply = () => {
         const mx = x.toFixed(4), my = y.toFixed(4);
-        light.style.transform = `translate3d(${(x * hero.clientWidth).toFixed(1)}px, ${(y * hero.clientHeight).toFixed(1)}px, 0)`;
-        // Posición del cursor relativa al cristal, para centrar el arcoíris
         const hr = hero.getBoundingClientRect();
-        const sr = stage.getBoundingClientRect();
-        const px = ((x * hr.width + hr.left) - sr.left) / sr.width * 100;
-        const py = ((y * hr.height + hr.top) - sr.top) / sr.height * 100;
-        for (const el of lit) {
-          el.style.setProperty('--mx', mx);
-          el.style.setProperty('--my', my);
-          el.style.setProperty('--px', px.toFixed(2) + '%');
-          el.style.setProperty('--py', py.toFixed(2) + '%');
-        }
+        light.style.transform = `translate3d(${(x * hr.width).toFixed(1)}px, ${(y * hr.height).toFixed(1)}px, 0)`;
+        for (const el of lit) { el.style.setProperty('--mx', mx); el.style.setProperty('--my', my); }
+        [cx, cy] = toStage(x * hr.width + hr.left, y * hr.height + hr.top);
       };
 
-      if (reduce) { apply(); return; }
+      resize();
+      new ResizeObserver(resize).observe(canvas);
+      const start = () => { apply(); draw(performance.now()); };
+      src.complete ? start() : src.addEventListener('load', start);
 
-      let nextGlint = 0, running = true;
+      if (reduce) { addEventListener('resize', () => requestAnimationFrame(start)); return; }
+
+      let nextGlint = 0, running = true, lastX = -1, lastY = -1;
       new IntersectionObserver(([en]) => {
         const was = running; running = en.isIntersecting;
         if (running && !was) requestAnimationFrame(loop);
@@ -206,11 +317,17 @@
         const k = t - lastMove < 3000 ? .2 : .05;
         x += (tx - x) * k;
         y += (ty - y) * k;
-        apply();
         if (t > nextGlint && !small.matches) {
           const [hx, hy] = hotspots[Math.floor(Math.random() * hotspots.length)];
-          spawnGlint(hx + (Math.random() * 6 - 3), hy + (Math.random() * 6 - 3), false);
+          addGlint(hx + (Math.random() * .06 - .03), hy + (Math.random() * .06 - .03), .09, 1100);
           nextGlint = t + 900 + Math.random() * 1400;
+        }
+        // Solo se redibuja si algo cambió
+        if (dirty || glints.length || flash || Math.abs(x - lastX) > 1e-4 || Math.abs(y - lastY) > 1e-4) {
+          apply();
+          draw(t);
+          lastX = x; lastY = y; dirty = false;
+          if (flash && t - flash > 700) flash = 0;
         }
         requestAnimationFrame(loop);
       }
