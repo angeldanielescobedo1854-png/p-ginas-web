@@ -103,7 +103,9 @@
       const canvas = document.querySelector('.stage__tilt');
       const src = document.querySelector('.stage__src');
       const light = document.querySelector('.hero__light');
+      const stageEl = document.querySelector('.stage');
       const ctx = canvas.getContext('2d');
+      if (!ctx) return;   // sin canvas: se queda la foto normal
       const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
       const small = matchMedia('(max-width: 760px)');
       // Las variables de luz solo van en las capas de luz, nunca en el texto
@@ -127,6 +129,8 @@
         canvas.width = prism.width = W;
         canvas.height = prism.height = H;
         dirty = true;
+        // Cambiar el tamaño borra el canvas: se vuelve a pintar de inmediato
+        if (stageEl.classList.contains('is-canvas')) { apply(); draw(performance.now()); }
       }
 
       let tx = .65, ty = .4, x = tx, y = ty, lastMove = -1e4, lastTrail = 0, flash = 0;
@@ -292,12 +296,20 @@
         [cx, cy] = toStage(x * hr.width + hr.left, y * hr.height + hr.top);
       };
 
-      resize();
-      new ResizeObserver(resize).observe(canvas);
-      const start = () => { apply(); draw(performance.now()); };
+      const start = () => {
+        if (!src.naturalWidth) return;   // la foto no cargó: no se toca nada
+        try {
+          stageEl.classList.add('is-canvas');
+          resize();
+          if (!W || W < 2) throw new Error('sin tamaño');
+        } catch (err) {
+          stageEl.classList.remove('is-canvas');   // vuelve a la foto normal
+        }
+      };
+      if ('ResizeObserver' in window) new ResizeObserver(() => { if (stageEl.classList.contains('is-canvas')) resize(); }).observe(canvas);
       src.complete ? start() : src.addEventListener('load', start);
 
-      if (reduce) { addEventListener('resize', () => requestAnimationFrame(start)); return; }
+      if (reduce) return;
 
       let nextGlint = 0, running = true, lastX = -1, lastY = -1;
       new IntersectionObserver(([en]) => {

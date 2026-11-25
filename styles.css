@@ -176,7 +176,8 @@ a { color: inherit; text-decoration: none; }
   pointer-events: none;
 }
 
-.stage__tilt {
+.stage__tilt,
+.stage__src {
   position: relative;
   display: block;
   height: min(88vh, 860px);
@@ -189,8 +190,18 @@ a { color: inherit; text-decoration: none; }
   will-change: transform;
   animation: fade-in 1.4s ease both;
 }
-/* La foto solo sirve de fuente para el canvas */
-.stage__src { display: none; }
+/* Sin JavaScript (o si el canvas falla) se ve la foto normal.
+   Cuando el canvas logra dibujar, la foto se oculta y él la reemplaza. */
+.stage__src {
+  width: auto;
+  object-fit: cover;
+  filter: brightness(1.22) contrast(1.15) saturate(1.15);
+  -webkit-mask-image: radial-gradient(ellipse 60% 52% at 58% 50%, #000 55%, transparent 97%);
+          mask-image: radial-gradient(ellipse 60% 52% at 58% 50%, #000 55%, transparent 97%);
+}
+.stage .stage__tilt { display: none; }
+.stage.is-canvas .stage__tilt { display: block; }
+.stage.is-canvas .stage__src { display: none; }
 
 /* Orbe de luz que acompaña al cursor por toda la portada.
    Se mueve con transform (sin redibujar nada más). */
@@ -354,7 +365,7 @@ h1 {
   /* En celular el cristal queda detrás del texto, arriba */
   .stage { inset: 0 -14vw auto auto; width: 100vw; height: 66svh; align-items: flex-start; padding-top: 64px; }
   .hero__light { width: 280px; height: 280px; margin: -140px 0 0 -140px; }
-  .stage__tilt { height: 100%; }
+  .stage__tilt, .stage__src { height: 100%; }
   /* Oscurece la parte baja para que el texto se lea bien */
   .hero::after {
     content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
