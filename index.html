@@ -102,6 +102,9 @@
       const stage = document.querySelector('.stage__tilt');
       const glints = document.querySelector('.stage__glints');
       const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const small = matchMedia('(max-width: 760px)');
+      // Las variables de luz solo van en las capas de luz, nunca en el texto
+      const lit = [document.querySelector('.hero__glow'), document.querySelector('.hero__beam'), document.querySelector('.stage')];
 
       // Puntos brillantes del cristal (en % de la imagen) donde aparecen destellos
       const hotspots = [[86,30],[74,18],[58,27],[66,44],[62,56],[44,70],[38,84],[70,66],[92,38]];
@@ -146,15 +149,18 @@
       });
 
       const apply = () => {
-        hero.style.setProperty('--mx', x.toFixed(4));
-        hero.style.setProperty('--my', y.toFixed(4));
+        const mx = x.toFixed(4), my = y.toFixed(4);
         // Posición del cursor relativa al cristal, para centrar el arcoíris
         const hr = hero.getBoundingClientRect();
         const sr = stage.getBoundingClientRect();
         const px = ((x * hr.width + hr.left) - sr.left) / sr.width * 100;
         const py = ((y * hr.height + hr.top) - sr.top) / sr.height * 100;
-        hero.style.setProperty('--px', px.toFixed(2) + '%');
-        hero.style.setProperty('--py', py.toFixed(2) + '%');
+        for (const el of lit) {
+          el.style.setProperty('--mx', mx);
+          el.style.setProperty('--my', my);
+          el.style.setProperty('--px', px.toFixed(2) + '%');
+          el.style.setProperty('--py', py.toFixed(2) + '%');
+        }
       };
 
       if (reduce) { apply(); return; }
@@ -175,7 +181,7 @@
         x += (tx - x) * .07;
         y += (ty - y) * .07;
         apply();
-        if (t > nextGlint) {
+        if (t > nextGlint && !small.matches) {
           const [hx, hy] = hotspots[Math.floor(Math.random() * hotspots.length)];
           spawnGlint(hx + (Math.random() * 6 - 3), hy + (Math.random() * 6 - 3), false);
           nextGlint = t + 900 + Math.random() * 1400;

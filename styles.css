@@ -72,7 +72,6 @@ a { color: inherit; text-decoration: none; }
   opacity: .35;
   z-index: -1;
   transition: opacity .3s ease;
-  animation: spectrum-slide 6s linear infinite;
 }
 .btn:hover { transform: translateY(-2px); }
 .btn:hover::before { opacity: .8; }
@@ -82,18 +81,15 @@ a { color: inherit; text-decoration: none; }
 .btn:hover svg { transform: translateX(3px); }
 
 .btn--ghost {
-  background: var(--glass);
+  background: rgba(12, 18, 15, .7);
   color: var(--ink);
   border-color: var(--line);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 .btn--ghost::before { display: none; }
 .btn--ghost:hover { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .4); }
 
 .btn--small { padding: 10px 18px; font-size: 15px; }
 
-@keyframes spectrum-slide { to { background-position: 200% 0; } }
 
 /* ---------- Encabezado ---------- */
 .nav {
@@ -128,8 +124,9 @@ a { color: inherit; text-decoration: none; }
    --mx / --my = posición suavizada del cursor en el hero
    --px / --py = la misma posición, relativa a la imagen
    ========================================================= */
+.hero__glow, .hero__beam, .stage { --mx: .65; --my: .4; --px: 50%; --py: 40%; }
+
 .hero {
-  --mx: .65; --my: .4; --px: 50%; --py: 40%;
   position: relative;
   min-height: 100vh;
   min-height: 100svh;
@@ -266,7 +263,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* ---------- Texto ---------- */
-.hero__content { position: relative; z-index: 2; }
+.hero__content { position: relative; z-index: 2; isolation: isolate; }
 .hero__content > * { max-width: 620px; }
 
 .eyebrow {
@@ -277,9 +274,7 @@ a { color: inherit; text-decoration: none; }
   padding: 7px 14px 7px 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: var(--glass);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(5, 10, 8, .6);
   font-size: 14px;
   font-weight: 500;
   color: #d8ddda;
@@ -300,8 +295,8 @@ h1 {
 .spectrum {
   font-style: italic;
   background: var(--spectrum);
-  background-size: 300% 100%;
-  background-position: calc(var(--mx) * 100%) 50%;
+  background-size: 160% 100%;
+  background-position: 30% 50%;
   -webkit-background-clip: text;
           background-clip: text;
   color: transparent;
@@ -406,12 +401,12 @@ h1 {
   .hero { align-items: flex-end; padding: calc(96px + env(safe-area-inset-top, 0px)) 0 calc(72px + env(safe-area-inset-bottom, 0px)); }
 
   /* En celular el cristal queda detrás del texto, arriba */
-  .stage { inset: 0 -18vw auto auto; width: 100vw; height: 72svh; align-items: flex-start; padding-top: 64px; opacity: .9; }
+  .stage { inset: 0 -22vw auto auto; width: 100vw; height: 62svh; align-items: flex-start; padding-top: 64px; opacity: .75; }
   .stage__tilt { height: 100%; }
   /* Oscurece la parte baja para que el texto se lea bien */
   .hero::after {
     content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
-    background: linear-gradient(180deg, transparent 22%, rgba(5, 10, 8, .7) 48%, var(--bg) 70%);
+    background: linear-gradient(180deg, transparent 18%, rgba(5, 10, 8, .82) 40%, var(--bg) 60%);
   }
   .hero__beam { top: 4%; height: 80px; }
 
