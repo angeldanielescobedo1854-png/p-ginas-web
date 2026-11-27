@@ -9,6 +9,7 @@ export default function App() {
     <Canvas
       dpr={[1, 2]}
       frameloop="demand"
+      style={{ touchAction: 'none' }}
       camera={{ position: [0, 0.3, 11], fov: 30, near: 0.1, far: 100 }}
       gl={{
         antialias: true,

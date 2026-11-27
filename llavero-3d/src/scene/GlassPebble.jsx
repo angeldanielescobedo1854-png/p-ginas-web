@@ -41,10 +41,10 @@ const GLASS = {
  * `buffer`: textura de lo que hay DETRÁS del globo (la genera TransmissionLayers).
  * `glassRef`: registra la malla para que el sistema de capas pueda ocultarla en sus pases.
  */
-export default function GlassPebble({ geometry, variant = 'clear', buffer, glassRef, children, ...props }) {
+export default function GlassPebble({ geometry, variant = 'clear', buffer, glassRef, groupRef, children, ...props }) {
   const v = GLASS[variant]
   return (
-    <group {...props}>
+    <group ref={groupRef} {...props}>
       <mesh ref={glassRef} geometry={geometry} renderOrder={1}>
         <MeshTransmissionMaterial
           buffer={buffer}
